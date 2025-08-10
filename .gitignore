@@ -6,6 +6,8 @@
 /server/supabase/functions/.env
 /server/node_modules/
 /server/.temp/
+/server/supabase/.branches/
+/server/supabase/.temp/
 /server/package-lock.json
 .vscode/
 todo.md

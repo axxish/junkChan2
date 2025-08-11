@@ -1,24 +1,21 @@
-// supabase/functions/generate-avatar-upload-url/index.ts (v2 - Production Ready)
+// supabase/functions/generate-avatar-upload-url/index.ts (Final Version)
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
-import { createClient } from "jsr:@supabase/supabase-js"
+import { createClient, SupabaseClient } from "jsr:@supabase/supabase-js" // Import SupabaseClient type
 
+// Correct the path if your file is named utils.ts
 import {
-  createAdminClient,
   errorResponse,
   createApiHandler,
   CORS_HEADERS
 } from '../_shared/util.ts'
 
-
+// --- CHANGE 1: Define the Action Type for rate limiting ---
+const ACTION_TYPE = 'avatar_upload';
 const ALLOWED_MIME_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'];
 
-
-
-
-
-
-async function handleGenerateUrl(req: Request): Promise<Response> {
+// --- CHANGE 2: Modify the function signature to accept the injected client ---
+async function handleGenerateUrl(req: Request, supabaseAdmin: SupabaseClient): Promise<Response> {
   // 1. Authenticate the user
   const authHeader = req.headers.get('Authorization')!
   const supabase = createClient(
@@ -33,7 +30,6 @@ async function handleGenerateUrl(req: Request): Promise<Response> {
 
   // 2. Get and VALIDATE the file type declared by the client
   const { fileType } = await req.json();
-
   if (!fileType) {
     return errorResponse(400, 'Bad Request: "fileType" is required.');
   }
@@ -41,15 +37,13 @@ async function handleGenerateUrl(req: Request): Promise<Response> {
     return errorResponse(400, `Bad Request: File type "${fileType}" is not allowed.`);
   }
 
-  // 3. Define the secure path and create the admin client
-  const avatarPath = `${user.id}`; // remove the extension for flexibility
-  const supabaseAdmin = createAdminClient();
+
+  const avatarPath = `avatars/${user.id}`; 
 
   // 4. Generate the signed URL with upload options
   const { data, error } = await supabaseAdmin.storage
     .from('avatars')
     .createSignedUploadUrl(avatarPath, {
-      // `upsert: true` means it will overwrite an existing file at the same path.
       upsert: true, 
     });
 
@@ -58,8 +52,13 @@ async function handleGenerateUrl(req: Request): Promise<Response> {
     return errorResponse(500, 'Could not create signed URL for upload.');
   }
 
-  // 5. Return a slightly modified response object.
-  // We need to tell the frontend what Content-Type header it MUST use.
+  // --- CHANGE 3: Log the successful action for future rate-limit checks ---
+  await supabaseAdmin.from('action_logs').insert({
+    user_id: user.id,
+    action_type: ACTION_TYPE,
+  });
+
+  // 5. Return a success response.
   const responseData = {
     ...data,
     requiredHeaders: {
@@ -73,4 +72,5 @@ async function handleGenerateUrl(req: Request): Promise<Response> {
   });
 }
 
-Deno.serve(createApiHandler(handleGenerateUrl));
+// --- CHANGE 4: Tell the wrapper to enforce rate limiting for this action ---
+Deno.serve(createApiHandler(handleGenerateUrl, { actionType: ACTION_TYPE }));

@@ -1,5 +1,4 @@
 // supabase/functions/_shared/utils.ts
-
 import { createClient, SupabaseClient } from "jsr:@supabase/supabase-js"
 
 // --- Existing Helpers (slightly modified) ---
@@ -29,15 +28,24 @@ export function createAdminClient(): SupabaseClient {
 
 /**
  * A higher-order function that wraps an API endpoint's logic.
- * This version handles CORS, creates a single admin client,
- * injects the client into the core logic, and manages top-level error catching.
+ * This is the central piece of our API architecture.
+ * 
+ * It handles:
+ * 1. CORS preflight requests.
+ * 2. Creating a single Supabase admin client per request.
+ * 3. Performing optional, declarative rate-limiting based on action type.
+ * 4. Injecting the admin client into the core logic handler (Dependency Injection).
+ * 5. Managing top-level error catching for unexpected failures.
  * 
  * @param {Function} handler - The async function containing the core business logic.
  *                             It MUST accept `req: Request` and `supabaseAdmin: SupabaseClient`.
+ * @param {object} [options] - Optional configuration for the handler.
+ * @param {string} [options.actionType] - The action type for rate limiting (e.g., 'avatar_upload').
  * @returns {Function} A Deno request handler ready to be served.
  */
 export function createApiHandler(
-  handler: (req: Request, supabaseAdmin: SupabaseClient) => Promise<Response>
+  handler: (req: Request, supabaseAdmin: SupabaseClient) => Promise<Response>,
+  options?: { actionType?: string }
 ) {
   return async (req: Request): Promise<Response> => {
     // 1. Handle CORS preflight requests immediately.
@@ -49,18 +57,52 @@ export function createApiHandler(
       // 2. Create the Supabase admin client ONCE per request.
       const supabaseAdmin = createAdminClient();
 
-      // 3. Execute the core business logic handler.
+      // 3. Perform rate limiting if an actionType is specified in the options.
+      if (options?.actionType) {
+        // Determine the identity for rate limiting (prioritizing user ID over IP).
+        const authHeader = req.headers.get('Authorization');
+        let userId: string | undefined;
+
+        // If there's an auth header, try to resolve the user ID from the JWT.
+        if (authHeader) {
+          const supabase:SupabaseClient = createClient(
+            Deno.env.get('SUPABASE_URL')!, 
+            Deno.env.get('SUPABASE_ANON_KEY')!, 
+            { global: { headers: { Authorization: authHeader } } }
+          );
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            userId = user.id;
+          }
+        }
+        
+        // Always get the IP as a fallback for anonymous or unauthenticated requests.
+        const ip = req.headers.get('x-forwarded-for')?.split(',').shift()?.trim();
+
+        // Call the rate-limiting logic using the client we already created.
+        const { error: rateLimitError } = await checkRateLimit(supabaseAdmin, {
+          actionType: options.actionType,
+          userId: userId, // Will be undefined if user is not logged in
+          ip: ip,         // checkRateLimit will use this if userId is falsy
+        });
+
+        // If the user is rate-limited, stop execution and return the error.
+        if (rateLimitError) {
+          return rateLimitError;
+        }
+      }
+
+      // 4. Execute the core business logic handler.
       // We inject the `supabaseAdmin` client we created into the handler.
       return await handler(req, supabaseAdmin);
 
     } catch (error) {
-      // 4. Catch any unhandled errors from the handler and return a generic 500.
+      // 5. Catch any unhandled errors from the handler and return a generic 500.
       console.error('Unhandled Error in handler wrapper:', error);
       return errorResponse(500, 'An internal server error occurred.');
     }
   };
 }
-
 /**
  * rate-limiting function that checks if a user or IP
  * has exceeded the allowed number of actions in a given time window.
@@ -113,7 +155,7 @@ export async function checkRateLimit(
   const timeWindowStart = new Date(Date.now() - limitMinutes * 60 * 1000).toISOString();
   
   // 3. Build and execute the query to count recent actions.
-  let query = supabaseAdmin
+  const query = supabaseAdmin
     .from('action_logs')
     .select('*', { count: 'exact', head: true })
     .eq('action_type', actionType)

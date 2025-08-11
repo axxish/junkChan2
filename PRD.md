@@ -48,6 +48,8 @@ This is an imgboard application built using Supabase as the backend. The archite
 
 All Edge Function `index.ts` files **MUST** use the `createApiHandler` wrapper from `_shared/utils.ts`. This abstracts away CORS and top-level error handling. The resulting code should be clean and focused purely on the endpoint's specific business logic.
 
+!!!! FOR RATE LIMITING PURPOSES, createApiHandler now also takes in an optional actionalType parameter.
+
 ```typescript
 // Template for all `index.ts` files:
 import { createApiHandler, ...otherHelpers } from '../_shared/utils.ts'

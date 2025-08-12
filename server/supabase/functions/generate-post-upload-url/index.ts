@@ -27,7 +27,7 @@ async function handleGeneratePostUrl(req: Request, supabaseAdmin: SupabaseClient
   // 2. Business Logic: Generate a unique path and the signed URL
   // A UUID ensures no filename collisions. We append the file extension for clarity.
   const fileExt = fileType.split('/')[1];
-  const imagePath = `posts/${crypto.randomUUID()}.${fileExt}`;
+  const imagePath = `${crypto.randomUUID()}.${fileExt}`;
 
   const { data, error } = await supabaseAdmin.storage
     .from('posts')

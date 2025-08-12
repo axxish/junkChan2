@@ -45,7 +45,6 @@ async function handleSetAvatarUrl(req: Request): Promise<Response> {
     .getPublicUrl(avatarPath); // The path to the file
 
   const fullAvatarUrl = urlData.publicUrl;
-
   // 5. Perform the database update.
   const { error: updateError } = await supabaseAdmin
     .from('profiles')

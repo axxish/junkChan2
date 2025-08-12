@@ -1,88 +1,93 @@
-// supabase/functions/create-post/index.ts
+// supabase/functions/create-post/index.ts (Aligned with DB Config)
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { createClient, SupabaseClient } from "jsr:@supabase/supabase-js"
 import {
   errorResponse,
   createApiHandler,
-  CORS_HEADERS
+  CORS_HEADERS,
+  checkRateLimit
 } from '../_shared/util.ts'
 
-console.log("create-post function initialized");
-  
-const ACTION_TYPE_ANON = 'anon_create_post';
-const ACTION_TYPE_AUTH = 'auth_create_post';
+console.log("create-post function initialized (DB-Aligned)");
+
+// --- CHANGE 1: Use the exact action names from your app_config table ---
+const ACTION_TYPES = {
+  POST_ANON: 'anon_create_post',
+  POST_AUTH: 'auth_create_post',
+};
 
 async function handleCreatePost(req: Request, supabaseAdmin: SupabaseClient): Promise<Response> {
-  // 1. Parse and Validate Input
-  const { boardSlug, imagePath, comment } = await req.json();
-  if (!boardSlug || !imagePath) {
-    return errorResponse(400, 'Bad Request: "boardSlug" and "imagePath" are required.');
+  // 1. Parse all possible parameters from the request body.
+  const { boardSlug, threadId, imagePath, comment } = await req.json();
+
+  // 2. Initial Validation
+  if (!boardSlug && !threadId) {
+    return errorResponse(400, 'Bad Request: A post must have either a "boardSlug" or a "threadId".');
   }
-  if (!imagePath.startsWith('posts/')) {
-    return errorResponse(400, 'Bad Request: Invalid image path.');
+  if (boardSlug && !imagePath) {
+    return errorResponse(400, 'Bad Request: An image is required to create a new thread.');
   }
 
-  // 2. Look up the Board ID from the slug
-  const { data: board, error: boardError } = await supabaseAdmin
-    .from('boards')
-    .select('id')
-    .eq('slug', boardSlug)
-    .single();
-
-  if (boardError || !board) {
-    return errorResponse(404, `Board with slug "${boardSlug}" not found.`);
-  }
-  
-  // 3. Determine if the user is authenticated or anonymous
+  // 3. Determine user authentication status.
   const authHeader = req.headers.get('Authorization');
   let userId: string | undefined;
-
   if (authHeader) {
     const supabase = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_ANON_KEY')!, { global: { headers: { Authorization: authHeader } } });
     const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      userId = user.id;
-    }
+    if (user) userId = user.id;
   }
+  const isAuth = !!userId;
 
-  // 4. Construct the Post Record
-  const { data: urlData } = supabaseAdmin.storage.from('posts').getPublicUrl(imagePath);
-  const postRecord = {
-    board_id: board.id,
-    user_id: userId, // Will be null if anonymous
-    image_url: urlData.publicUrl,
-    comment: comment,
-    poster_ip: userId ? null : req.headers.get('x-forwarded-for')?.split(',').shift()?.trim(),
-  };
+  // 4. DYNAMIC RATE LIMITING: Check the limit based on auth status.
+  // --- CHANGE 2: The logic is now much simpler ---
+  const actionType = isAuth ? ACTION_TYPES.POST_AUTH : ACTION_TYPES.POST_ANON;
+  const ip = req.headers.get('x-forwarded-for')?.split(',').shift()?.trim();
 
-  // 5. Insert the post into the database
-  const { data: newPost, error: insertError } = await supabaseAdmin
-    .from('posts')
-    .insert(postRecord)
-    .select()
-    .single();
+  const { error: rateLimitError } = await checkRateLimit(supabaseAdmin, {
+    actionType: actionType,
+    userId: userId,
+    ip: ip,
+  });
+  if (rateLimitError) return rateLimitError;
 
-  if (insertError) {
-    console.error("Error creating post:", insertError);
+  // 5. Call the unified database RPC.
+  const { data, error } = await supabaseAdmin.rpc('create_post', {
+    p_board_slug: boardSlug,
+    p_thread_id: threadId,
+    p_image_path: imagePath,
+    p_comment: comment,
+    p_user_id: userId,
+    p_poster_ip: isAuth ? null : ip,
+  });
+
+  if (error) {
+    if (error.message.includes('not found')) return errorResponse(404, error.message);
+    if (error.code === '23505') return errorResponse(409, 'Conflict: This image has already been used to start a thread.');
     return errorResponse(500, "Could not create post.");
   }
-  
-  // 6. Log the action for rate limiting
-  const ip = req.headers.get('x-forwarded-for')?.split(',').shift()?.trim();
+
+  // 6. Log the successful action.
   await supabaseAdmin.from('action_logs').insert({
     user_id: userId,
     ip_address: ip,
-    action_type: userId ? ACTION_TYPE_AUTH : ACTION_TYPE_ANON,
+    action_type: actionType, // Use the same simplified actionType
   });
 
-  // 7. Return the newly created post object
-  return new Response(JSON.stringify(newPost), {
-    status: 201, // 201 Created
+  // 7. Format and return the success response.
+  const newPost = data[0].j;
+  let responseData = { ...newPost };
+  if (newPost.image_path) {
+    const { data: urlData } = supabaseAdmin.storage.from('posts').getPublicUrl(newPost.image_path);
+    responseData = { ...responseData, image_url: urlData.publicUrl };
+    delete responseData.image_path;
+  }
+
+  return new Response(JSON.stringify(responseData), {
+    status: 201,
     headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
   });
 }
 
-// We will add the rate limit to the wrapper once we decide on the action type.
-// For now, let's build it without the declarative rate limit in the wrapper.
+// The Deno.serve call is simple and clean.
 Deno.serve(createApiHandler(handleCreatePost));

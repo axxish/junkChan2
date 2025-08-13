@@ -95,11 +95,11 @@ This section documents the static tables and the dynamic, logical components of 
 | **GET** `/functions/v1/board-threadss/{board_slug}` | Retrieves a paginated list of threads for a single board. | No   | `?limit=<num>&page=<num>` |
 | **GET** `/functions/v1/posts/{post_id}`             | Retrieves a single thread and its paginated replies.      | No   | `?limit=<num>&page=<num>` |
 
-#### Moderation
+### Moderation
 
-| Endpoint                                              | Description                                  | Auth       | Body / Params |
-| :---------------------------------------------------- | :------------------------------------------- | :--------- | :------------ |
-| **DELETE** `/functions/v1/posts/{post_id}`    | Deletes a specific post and all its replies. | Yes (Mod+) | *(None)*    |
+| Endpoint                                           | Description                                  | Auth       | Body / Params |
+| :------------------------------------------------- | :------------------------------------------- | :--------- | :------------ |
+| **DELETE** `/functions/v1/posts/{post_id}` | Deletes a specific post and all its replies. | Yes (Mod+) | *(None)*    |
 
 ## 5. Coding Style & Architecture
 

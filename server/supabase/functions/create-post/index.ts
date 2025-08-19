@@ -19,7 +19,7 @@ const ACTION_TYPES = {
 
 async function handleCreatePost(req: Request, supabaseAdmin: SupabaseClient): Promise<Response> {
   // 1. Parse all possible parameters from the request body.
-  const { boardSlug, threadId, imagePath, comment } = await req.json();
+  const { boardSlug, threadId, imagePath, comment, subject } = await req.json();
 
   // 2. Initial Validation
   if (!boardSlug && !threadId) {
@@ -40,7 +40,7 @@ async function handleCreatePost(req: Request, supabaseAdmin: SupabaseClient): Pr
   const isAuth = !!userId;
 
   // 4. DYNAMIC RATE LIMITING: Check the limit based on auth status.
-  // --- CHANGE 2: The logic is now much simpler ---
+
   const actionType = isAuth ? ACTION_TYPES.POST_AUTH : ACTION_TYPES.POST_ANON;
   const ip = req.headers.get('x-forwarded-for')?.split(',').shift()?.trim();
 
@@ -52,13 +52,14 @@ async function handleCreatePost(req: Request, supabaseAdmin: SupabaseClient): Pr
   if (rateLimitError) return rateLimitError;
 
   // 5. Call the unified database RPC.
-  const { data, error } = await supabaseAdmin.rpc('create_post', {
+  const { data, error } = await supabaseAdmin.rpc('create_post2', {
     p_board_slug: boardSlug,
     p_thread_id: threadId,
     p_image_path: imagePath,
     p_comment: comment,
     p_user_id: userId,
     p_poster_ip: isAuth ? null : ip,
+    p_subject: subject
   });
 
   if (error) {

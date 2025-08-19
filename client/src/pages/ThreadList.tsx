@@ -17,7 +17,6 @@ export interface ThreadPreview {
     thread_id: number;
     user_id: string | null; // Can be null for anonymous posters
     comment: string;
-    poster_ip: string; // TODO: Change this on the serverside, both locally and on the remote instance
     created_at: string;
     board_post_id: number;
     reply_count: number;
@@ -75,7 +74,7 @@ const _ThreadList = ({ slug }: ThreadListProps) => {
         content = (
             <Stack pl="lg">
                 {threads.map((thread) => (
-                    <div>
+                    <div key={thread.id}>
                        
                         <Stack>
                             <Group>

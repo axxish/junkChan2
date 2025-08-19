@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { type Board } from '../util/types';
-import apiClient from '../util/axiosClient';
+import { type Board } from "../util/types.ts";
+import apiClient from "../util/axiosClient.ts";
 
 interface BoardsState {
   boards: Board[];
@@ -16,7 +16,7 @@ const initialState: BoardsState = {
 };
 
 export const fetchBoards = createAsyncThunk('boards/fetchBoards', async () => {
-  const response = await apiClient.get<Board[]>('https://ayaldagjacwuwllsmefn.supabase.co/functions/v1/boards');
+  const response = await apiClient.get<Board[]>('/functions/v1/boards');
 
   const sortedData = response.data.sort((a, b) => a.name.localeCompare(b.name));
   return sortedData;

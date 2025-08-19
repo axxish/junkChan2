@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { store } from '../store';
+import { store } from "../store.ts";
 
 // Create a new axios instance with our base URL
 const apiClient = axios.create({

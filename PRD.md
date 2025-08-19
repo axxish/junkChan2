@@ -81,11 +81,11 @@ This section documents the static tables and the dynamic, logical components of 
 
 #### Content Creation
 
-| Endpoint                                                  | Description                                                        | Auth                  | Body / Params                                       |
-| :-------------------------------------------------------- | :----------------------------------------------------------------- | :-------------------- | :-------------------------------------------------- |
-| **POST** `/functions/v1/generate-post-upload-url` | Creates a secure, signed URL for uploading a new post image.       | Optional              | `{ fileType }`                                    |
-| **POST** `/functions/v1/create-post`              | Creates a new post (thread or reply). Handles images and mentions. | Optional              | `{ boardSlug?, threadId?, imagePath?, comment? }` |
-| **POST** `/functions/v1/create-board`             | Creates a new board category.                                      | **Yes (Admin)** | `{ slug, name, description }`                     |
+| Endpoint                                                  | Description                                                        | Auth                  | Body / Params                                                |
+| :-------------------------------------------------------- | :----------------------------------------------------------------- | :-------------------- | :----------------------------------------------------------- |
+| **POST** `/functions/v1/generate-post-upload-url` | Creates a secure, signed URL for uploading a new post image.       | Optional              | `{ fileType }`                                             |
+| **POST** `/functions/v1/create-post`              | Creates a new post (thread or reply). Handles images and mentions. | Optional              | `{ boardSlug?, threadId?, imagePath?, comment?, subject?}` |
+| **POST** `/functions/v1/create-board`             | Creates a new board category.                                      | **Yes (Admin)** | `{ slug, name, description }`                              |
 
 #### Content Retrieval
 

@@ -15,7 +15,7 @@ export function Home() {
     const { boards, status, error } = useAppSelector((state) => state.boards);
 
     useEffect(() => {
-
+    
         if (status === 'idle') {
             dispatch(fetchBoards());
         }

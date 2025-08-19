@@ -38,7 +38,7 @@ async function handleGenerateUrl(req: Request, supabaseAdmin: SupabaseClient): P
   }
 
 
-  const avatarPath = `avatars/${user.id}`; 
+  const avatarPath = `${user.id}`; 
 
   // 4. Generate the signed URL with upload options
   const { data, error } = await supabaseAdmin.storage

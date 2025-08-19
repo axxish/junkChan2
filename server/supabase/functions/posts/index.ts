@@ -25,16 +25,14 @@ async function handlePost(req: Request, supabaseAdmin: SupabaseClient): Promise<
 
 }
 
-
 async function handleGetPost(req: Request, supabaseAdmin: SupabaseClient): Promise<Response> {
   // 1. Extract parameters...
-
   const url = new URL(req.url);
   const pathParts = url.pathname.split('/');
   const postId = parseInt(pathParts[pathParts.length - 1], 10);
   if (isNaN(postId)) return errorResponse(400, "Invalid post ID.");
   const page = parseInt(url.searchParams.get('page') || '1', 10);
-  const limit = parseInt(url.searchParams.get('limit') || '100', 10);
+  const limit = parseInt(url.searchParams.get('replies_limit') || '100', 10);
   const offset = (page - 1) * limit;
 
   // 2. Call our database RPC.
@@ -49,11 +47,16 @@ async function handleGetPost(req: Request, supabaseAdmin: SupabaseClient): Promi
     return errorResponse(500, "Could not fetch thread.");
   }
   
-  // 3. THE FIX: Cast the data and process it directly.
+  // 3. Apply our updated type and process the data.
   const threadData = data as FullThread;
+
+  // If the OP was not found, the `op` field will be null.
+  if (!threadData.op) {
+    return errorResponse(404, `Post with ID ${postId} not found.`);
+  }
   
   // Add image_url to the OP if it has an image_path.
-  if (threadData.op?.image_path) {
+  if (threadData.op.image_path) {
     const { data: urlData } = supabaseAdmin.storage.from('posts').getPublicUrl(threadData.op.image_path);
     threadData.op.image_url = urlData.publicUrl;
   }
@@ -66,7 +69,7 @@ async function handleGetPost(req: Request, supabaseAdmin: SupabaseClient): Promi
     }
   });
 
-  // 4. Return the modified data.
+  // 4. Return the modified data, which now correctly includes the 'users' array from the DB.
   return new Response(JSON.stringify(threadData), {
     status: 200,
     headers: { 'Content-Type': 'application/json', ...CORS_HEADERS },
@@ -74,7 +77,7 @@ async function handleGetPost(req: Request, supabaseAdmin: SupabaseClient): Promi
 }
 
 
-// This is the NEW handler for the DELETE logic.
+
 async function handleDeletePost(req: Request, supabaseAdmin: SupabaseClient): Promise<Response> {
   // 1. Authenticate the user AND check their role. This is a protected action.
   const authHeader = req.headers.get('Authorization')!

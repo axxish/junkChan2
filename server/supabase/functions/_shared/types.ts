@@ -1,4 +1,25 @@
 
+
+export interface UserProfile {
+  id: string; // UUID
+  username: string | null;
+  avatar_url: string | null;
+  role: string | null;
+}
+
+
+export interface ReplyPreview {
+  id: number;
+  board_post_id: number;
+  comment: string | null;
+  created_at: string;
+  image_path: string | null;
+  user_id: string | null;
+  image_url?: string; // Will be added by the Edge Function
+}
+
+
+
 export interface Thread {
   id: number;
   board_id: number;
@@ -8,14 +29,14 @@ export interface Thread {
   image_path: string; // OPs always have an image path from the DB
   comment: string | null;
   created_at: string;
+  subject: string | null;
   reply_count: number;
   image_reply_count: number;
-  image_url?: string; // This will be added by the Edge Function
+  latest_replies: ReplyPreview[];
+  users: UserProfile[]; 
+  image_url?: string; 
 }
 
-/**
- * Represents a single post (OP or Reply) within a full thread view.
- */
 export interface Post {
   id: number;
   board_id: number;
@@ -35,12 +56,9 @@ export interface Reply extends Post {
   backlinks: number[];
 }
 
-/**
-
- * The full structure returned by the `get_thread_by_id` database function.
- */
 export interface FullThread {
   op: Post;
   replies: Reply[];
   totalReplyCount: number;
+  users: UserProfile[]; // Add this new property
 }

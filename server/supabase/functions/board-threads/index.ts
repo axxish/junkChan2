@@ -1,4 +1,4 @@
-// supabase/functions/board-threads/index.ts (Type-Safe Version)
+// supabase/functions/board-threads/index.ts (Updated for new RPC structure)
 
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 import { SupabaseClient } from "jsr:@supabase/supabase-js"
@@ -7,14 +7,13 @@ import {
   createApiHandler,
   CORS_HEADERS
 } from '../_shared/util.ts'
-// Import our new interface
-import { Thread } from '../_shared/types.ts'
+// Import our updated interfaces
+import { Thread, ReplyPreview } from '../_shared/types.ts'
 
-console.log("board-threads function initialized (Type-Safe)");
+console.log("board-threads function initialized (Updated for new RPC)");
 
 async function handleGetBoardThreads(req: Request, supabaseAdmin: SupabaseClient): Promise<Response> {
-  // 1. Extract parameters...
-  // ... (this logic remains the same)
+  // 1. Extract parameters from the request.
   const url = new URL(req.url);
   const pathParts = url.pathname.split('/');
   const boardSlug = pathParts[pathParts.length - 1];
@@ -24,7 +23,7 @@ async function handleGetBoardThreads(req: Request, supabaseAdmin: SupabaseClient
   const offset = (page - 1) * limit;
 
   // 2. Call our database RPC.
-  const { data, error } = await supabaseAdmin.rpc('get_threads_by_board_slug', {
+  const { data, error } = await supabaseAdmin.rpc('get_threads_by_board_slug2', {
     p_board_slug: boardSlug,
     p_page_limit: limit,
     p_page_offset: offset
@@ -36,20 +35,29 @@ async function handleGetBoardThreads(req: Request, supabaseAdmin: SupabaseClient
     return errorResponse(500, "Could not fetch board threads.");
   }
   
-
+  // 3. Apply our type to the raw data from the database.
   const { threads, totalCount } = data as { threads: Thread[], totalCount: number };
   
-
+  // 4. Process the data: add full public URLs for all images (OPs and replies).
   const threadsWithUrls = threads.map((thread: Thread) => {
-    const { data: urlData } = supabaseAdmin.storage.from('posts').getPublicUrl(thread.image_path);
-    return {
-      ...thread,
-      image_url: urlData.publicUrl,
-      image_path: undefined // This now correctly removes the property
-    };
+    // Add image_url to the OP
+    if (thread.image_path) {
+      const { data: urlData } = supabaseAdmin.storage.from('posts').getPublicUrl(thread.image_path);
+      thread.image_url = urlData.publicUrl;
+    }
+    
+    // Add image_url to any preview replies that have an image
+    thread.latest_replies.forEach((reply: ReplyPreview) => {
+      if (reply.image_path) {
+        const { data: urlData } = supabaseAdmin.storage.from('posts').getPublicUrl(reply.image_path);
+        reply.image_url = urlData.publicUrl;
+      }
+    });
+
+    return thread;
   });
 
-  // 5. Structure the final response...
+  // 5. Structure the final response.
   const responseData = {
     data: threadsWithUrls,
     meta: {

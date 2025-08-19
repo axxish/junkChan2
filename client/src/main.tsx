@@ -2,7 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import { Provider } from 'react-redux'; 
-import { store } from './store'; 
+import { store } from './store.ts'; 
 import { MantineProvider } from '@mantine/core';
 import { mantineTheme } from './util/theme.ts';
 import "./index.css"

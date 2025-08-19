@@ -28,6 +28,8 @@ async function handleGetBoards(_req: Request, supabaseAdmin: SupabaseClient): Pr
     return errorResponse(500, "Could not fetch boards.");
   }
 
+  
+
   // 2. Return the data as a simple JSON array.
   return new Response(JSON.stringify(data), {
     status: 200,

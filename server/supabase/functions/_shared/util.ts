@@ -87,14 +87,14 @@ export function createApiHandler(
         const ip = req.headers.get("x-forwarded-for")?.split(",").shift()
           ?.trim();
 
-        // Call the rate-limiting logic using the client we already created.
+        
         const { error: rateLimitError } = await checkRateLimit(supabaseAdmin, {
           actionType: options.actionType,
           userId: userId, // Will be undefined if user is not logged in
           ip: ip, // checkRateLimit will use this if userId is falsy
         });
 
-        // If the user is rate-limited, stop execution and return the error.
+   
         if (rateLimitError) {
           return rateLimitError;
         }
@@ -104,7 +104,7 @@ export function createApiHandler(
       // We inject the `supabaseAdmin` client we created into the handler.
       return await handler(req, supabaseAdmin);
     } catch (error) {
-      // 5. Catch any unhandled errors from the handler and return a generic 500.
+
       console.error("Unhandled Error in handler wrapper:", error);
       return errorResponse(500, "An internal server error occurred.");
     }

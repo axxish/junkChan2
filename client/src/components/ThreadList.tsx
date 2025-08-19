@@ -1,35 +1,23 @@
-import { Alert, Loader, Paper, Stack, Title, Text, Image, Flex, Divider, useMantineTheme, Group } from "@mantine/core"
+import { Alert, Loader, Paper, Stack, Title, Text, Image, Flex, Divider, useMantineTheme, Group, Button } from "@mantine/core"
 import { memo, useEffect, useState } from "react";
 import apiClient from "../util/axiosClient";
 import type { AxiosResponse } from "axios";
+import type { ThreadPreview } from "../util/types";
+import { ThreadPreviewComponent } from "./ThreadPreview";
 
-interface ThreadListProps {
-    slug: string
-}
 
 interface ApiResponse {
     data: ThreadPreview[];
     meta: any;
 }
-export interface ThreadPreview {
-    id: number;
-    board_id: number;
-    thread_id: number;
-    user_id: string | null; // Can be null for anonymous posters
-    comment: string;
-    created_at: string;
-    board_post_id: number;
-    reply_count: number;
-    image_reply_count: number;
-    image_url: string;
-}
 
-const _ThreadList = ({ slug }: ThreadListProps) => {
+const _ThreadList = ( {slug} : {slug : string} ) => {
     const theme = useMantineTheme();
 
     const [threads, setThreads] = useState<ThreadPreview[]>([]);
     const [status, setStatus] = useState<'idle' | 'loading' | 'succeeded' | 'failed'>('idle');
     const [error, setError] = useState<string | null>(null);
+
 
     useEffect(() => {
 
@@ -58,7 +46,7 @@ const _ThreadList = ({ slug }: ThreadListProps) => {
     let content;
 
     if (status === "loading" || status === "idle") {
-        content = <Loader />
+        content = <Loader type="dots" />
     }
 
     if (status === "failed") {
@@ -69,24 +57,13 @@ const _ThreadList = ({ slug }: ThreadListProps) => {
 
         )
     }
+
     if (status === "succeeded") {
         console.log(threads)
         content = (
             <Stack pl="lg">
                 {threads.map((thread) => (
-                    <div key={thread.id}>
-                       
-                        <Stack>
-                            <Group>
-                                <Text>{(thread.user_id===null) ? <>Anonymous</> : <>{thread.user_id}</>}</Text>
-                            </Group>
-                            <Flex gap="sm">
-                                <Image maw={"100px"} src={thread.image_url}></Image>
-                                <Text>{thread.comment}</Text>
-                            </Flex>
-                        </Stack>
-                        <Divider style={{ borderColor: theme.colors.borderCol[0] }} my="lg" variant='dashed' />
-                    </div>
+                    <ThreadPreviewComponent thread={thread}/>
                 ))}
 
             </Stack>

@@ -1,13 +1,13 @@
 import { configureStore } from '@reduxjs/toolkit';
 import boardsReducer from './slices/boardsSlice';
-import authReducer from './slices/authSlice'; // <-- 1. IMPORT THE NEW REDUCER
+import authReducer from './slices/authSlice'; 
 import { useDispatch, useSelector, type TypedUseSelectorHook } from 'react-redux';
 import App from './App';
 
 export const store = configureStore({
   reducer: {
     boards: boardsReducer,
-    auth: authReducer, 
+    auth: authReducer
   },
 });
 

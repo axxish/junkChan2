@@ -4,9 +4,9 @@ import { useAppSelector } from "../store";
 import { Page404 } from "./Page404";
 import { useEffect, useMemo } from "react";
 import { fetchBoards } from "../slices/boardsSlice";
-import { ActionIcon, AppShell, Center, Divider, Loader, Space, Title, useMantineTheme } from "@mantine/core";
+import { ActionIcon, AppShell, Button, Center, Divider, Loader, Space, Title, useMantineTheme } from "@mantine/core";
 import { IconHome } from "@tabler/icons-react";
-import { ThreadList } from "./ThreadList";
+import { ThreadList } from "../components/ThreadList";
 
 export function BoardPage() {
     const theme = useMantineTheme();
@@ -16,13 +16,6 @@ export function BoardPage() {
     const { boards, status } = useAppSelector((state) => state.boards);
     const currentBoard = boards.find(board => board.slug === slug);
     const dispatch = useAppDispatch();
-
-    const threadListElement = useMemo(() => {
-        if (!currentBoard) return null;
-        return <ThreadList slug={currentBoard.slug} />;
-    }, [currentBoard]); 
-
-
 
     useEffect(() => {
         if (status === 'idle') {
@@ -52,9 +45,9 @@ export function BoardPage() {
                 <Center> <Title order={2} c={theme.colors.textColor[0]}> /{currentBoard.slug}/ : {currentBoard.name} </Title></Center>
 
                 <Divider style={{ borderColor: theme.colors.borderCol[0] }} my="lg" variant='dashed' />
-
                 <Routes>
-                    <Route path="/" element={threadListElement}></Route>
+                    <Route path="/" element={<ThreadList slug={currentBoard.slug} />}></Route>
+                    <Route path="/404" element={<>test</>}></Route>
                 </Routes>
 
             </AppShell.Main>

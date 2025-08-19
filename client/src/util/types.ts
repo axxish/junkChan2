@@ -6,17 +6,67 @@ export interface Board {
   description: string;
   created_at: string;
 }
+export interface UserProfile {
+  id: string; // UUID
+  username: string | null;
+  avatar_url: string | null;
+  role: string | null;
+}
+
+
+export interface ReplyPreview {
+  id: number;
+  board_post_id: number;
+  comment: string | null;
+  created_at: string;
+  user_id: string | null; 
+  image_url?: string;   
+}
+
 
 export interface ThreadPreview {
   id: number;
   board_id: number;
   thread_id: number;
-  user_id: string | null; // Can be null for anonymous posters
-  comment: string;  
-  created_at: string;
   board_post_id: number;
-  subject: string;
+  user_id: string | null; 
+  comment: string | null;
+  created_at: string;
+  subject: string | null; 
   reply_count: number;
   image_reply_count: number;
-  image_url: string;
+  image_url: string;      
+  
+  // Enriched preview data from the API:
+  latest_replies: ReplyPreview[]; 
+  users: UserProfile[];           
+}
+
+
+export interface Post {
+  id: number;
+  board_id: number;
+  thread_id: number;
+  board_post_id: number;
+  user_id: string | null;
+  comment: string | null;
+  created_at: string;
+  subject: string | null; // Will be null for replies
+  image_url?: string;      // Optional for replies
+}
+
+
+export interface Reply extends Post {
+  backlinks: number[]; // An array of board_post_ids that have replied to this reply
+}
+
+/**
+ * Represents the entire data structure for a single thread view,
+ * as returned by `GET /functions/v1/post/{id}`.
+ */
+export interface FullThread {
+  op: Post;
+  replies: Reply[];
+  totalReplyCount: number;
+  users: UserProfile[];
 }

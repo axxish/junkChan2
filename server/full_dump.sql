@@ -146,6 +146,61 @@ $$;
 ALTER FUNCTION "public"."create_post"("p_board_slug" "text", "p_comment" "text", "p_user_id" "uuid", "p_poster_ip" "inet", "p_thread_id" bigint, "p_image_path" "text") OWNER TO "postgres";
 
 
+CREATE OR REPLACE FUNCTION "public"."create_post2"("p_board_slug" "text" DEFAULT NULL::"text", "p_comment" "text" DEFAULT NULL::"text", "p_user_id" "uuid" DEFAULT NULL::"uuid", "p_poster_ip" "inet" DEFAULT NULL::"inet", "p_thread_id" bigint DEFAULT NULL::bigint, "p_image_path" "text" DEFAULT NULL::"text", "p_subject" "text" DEFAULT NULL::"text") RETURNS TABLE("j" json)
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+DECLARE
+  target_board_id BIGINT;
+  new_post_id BIGINT;
+  new_board_post_id INT;
+  seq_name TEXT;
+  mention_id BIGINT;
+BEGIN
+  IF p_thread_id IS NOT NULL THEN
+    SELECT board_id INTO target_board_id FROM public.posts WHERE id = p_thread_id;
+    IF NOT FOUND THEN RAISE EXCEPTION 'Parent thread with id % not found', p_thread_id; END IF;
+  ELSE
+    IF p_board_slug IS NULL THEN RAISE EXCEPTION 'boardSlug is required for new threads.'; END IF;
+    SELECT id INTO target_board_id FROM public.boards WHERE slug = p_board_slug;
+    IF NOT FOUND THEN RAISE EXCEPTION 'Board with slug % not found', p_board_slug; END IF;
+    IF p_image_path IS NULL THEN RAISE EXCEPTION 'An image is required to start a new thread.'; END IF;
+  END IF;
+
+  -- 2. Get the next post number from the correct board's sequence.
+  seq_name := 'public.board_' || target_board_id || '_post_id_seq';
+  new_board_post_id := pg_catalog.nextval(seq_name);
+
+  -- 3. Insert the new post record, now including the subject.
+  INSERT INTO public.posts (board_id, thread_id, image_path, comment, user_id, poster_ip, board_post_id, subject)
+  VALUES (target_board_id, p_thread_id, p_image_path, p_comment, p_user_id, p_poster_ip, new_board_post_id, p_subject)
+  RETURNING id INTO new_post_id;
+
+  -- 4. If it's a new thread (OP), set its thread_id to its own id.
+  IF p_thread_id IS NULL THEN
+    UPDATE public.posts SET thread_id = new_post_id WHERE id = new_post_id;
+  END IF;
+  
+  -- ... (Step 5: Parse mentions - this logic is unchanged) ...
+  IF p_comment IS NOT NULL THEN
+    FOR mention_id IN SELECT (pg_catalog.regexp_matches(p_comment, '>>(\d+)', 'g'))[1]::bigint
+    LOOP
+      INSERT INTO public.post_mentions (source_post_id, target_post_id)
+      VALUES (new_post_id, mention_id)
+      ON CONFLICT (source_post_id, target_post_id) DO NOTHING;
+    END LOOP;
+  END IF;
+
+  -- 6. Return the full post data as a JSON object.
+  RETURN QUERY
+    SELECT pg_catalog.to_json(p) FROM public.posts p WHERE p.id = new_post_id;
+END;
+$$;
+
+
+ALTER FUNCTION "public"."create_post2"("p_board_slug" "text", "p_comment" "text", "p_user_id" "uuid", "p_poster_ip" "inet", "p_thread_id" bigint, "p_image_path" "text", "p_subject" "text") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."delete_post_storage_object"() RETURNS "trigger"
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO ''
@@ -167,20 +222,19 @@ ALTER FUNCTION "public"."delete_post_storage_object"() OWNER TO "postgres";
 CREATE OR REPLACE FUNCTION "public"."get_thread_by_id"("p_post_id" bigint, "p_replies_limit" integer, "p_replies_offset" integer) RETURNS json
     LANGUAGE "plpgsql" SECURITY DEFINER
     SET "search_path" TO ''
-    AS $$
-DECLARE
+    AS $$DECLARE
   thread_data JSON;
 BEGIN
   -- This complex query builds a nested JSON object in a single database round-trip.
   SELECT
     -- Use json_build_object to construct the final JSON structure.
     pg_catalog.json_build_object(
-      'op', (SELECT pg_catalog.to_json(op) FROM (SELECT * FROM public.posts WHERE id = p_post_id) op),
+      'op', (SELECT pg_catalog.to_json(op) FROM (SELECT id, board_id,thread_id,board_post_id,user_id,image_path,comment,created_at, subject FROM public.posts WHERE id = p_post_id) op),
       'replies', (
         SELECT COALESCE(pg_catalog.json_agg(r), '[]'::json)
         FROM (
           SELECT
-            p.*,
+            p.id, p.board_id, p.thread_id, p.board_post_id, p.user_id, p.image_path, p.comment, p.created_at,
             -- For each reply, create a JSON array of posts that replied TO IT.
             (
               SELECT COALESCE(pg_catalog.json_agg(m.source_post_id), '[]'::json)
@@ -197,23 +251,39 @@ BEGIN
           OFFSET p_replies_offset
         ) r
       ),
-      'totalReplyCount', (SELECT count(*) FROM public.posts WHERE thread_id = p_post_id AND id != p_post_id)
+      'totalReplyCount', (SELECT count(*) FROM public.posts WHERE thread_id = p_post_id AND id != p_post_id),
+    'users', (
+     SELECT COALESCE(json_agg(u), '[]'::json)
+        FROM (
+          SELECT
+
+            prof.id,
+            prof.username,
+            prof.avatar_url,
+            prof.role
+          FROM public.profiles prof
+          -- This subquery now finds ALL unique user IDs in the entire thread
+          WHERE prof.id IN (
+            SELECT DISTINCT user_id FROM public.posts
+            WHERE (posts.thread_id = p_post_id OR posts.id = p_post_id) AND posts.user_id IS NOT NULL
+          )
+        ) u
+    )
+
     )
   INTO thread_data;
 
   RETURN thread_data;
-END;
-$$;
+END;$$;
 
 
 ALTER FUNCTION "public"."get_thread_by_id"("p_post_id" bigint, "p_replies_limit" integer, "p_replies_offset" integer) OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."get_threads_by_board_slug"("p_board_slug" "text", "p_page_limit" integer, "p_page_offset" integer) RETURNS json
-    LANGUAGE "plpgsql" SECURITY DEFINER
+    LANGUAGE "plpgsql"
     SET "search_path" TO ''
-    AS $$
-DECLARE
+    AS $$DECLARE
   target_board_id BIGINT;
   total_thread_count INT;
   threads_json JSON;
@@ -227,10 +297,23 @@ BEGIN
   -- 2. Get the paginated list of threads and their reply counts.
   SELECT json_agg(t) INTO threads_json FROM (
     SELECT
-      p.*,
-      -- Subquery to count all replies for this thread.
+      -- --- TODO: CUSTOMIZE THIS LIST ---
+      -- BEFORE: p.*
+      -- AFTER: Explicitly list only the public-safe columns from the 'posts' table.
+      -- Prefix each column with 'p.'
+      p.id,
+      p.board_id,
+      p.thread_id,
+      p.board_post_id,
+      p.user_id,
+      p.image_path,
+      p.comment,
+      p.created_at,
+      p.subject,
+    
+
+      -- The subqueries for counts remain the same.
       (SELECT count(*) FROM public.posts r WHERE r.thread_id = p.id AND r.id != p.id) as reply_count,
-      -- Subquery to count only replies that have an image.
       (SELECT count(*) FROM public.posts r WHERE r.thread_id = p.id AND r.id != p.id AND r.image_path IS NOT NULL) as image_reply_count
     FROM
       public.posts p
@@ -252,11 +335,92 @@ BEGIN
     'threads', COALESCE(threads_json, '[]'::json),
     'totalCount', total_thread_count
   );
+END;$$;
+
+
+ALTER FUNCTION "public"."get_threads_by_board_slug"("p_board_slug" "text", "p_page_limit" integer, "p_page_offset" integer) OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."get_threads_by_board_slug2"("p_board_slug" "text", "p_page_limit" integer, "p_page_offset" integer) RETURNS json
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO ''
+    AS $$
+DECLARE
+  target_board_id BIGINT;
+  total_thread_count INT;
+  threads_json JSON;
+BEGIN
+  -- 1. Find the board's ID from its slug.
+  SELECT id INTO target_board_id FROM public.boards WHERE slug = p_board_slug;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Board with slug % not found', p_board_slug; END IF;
+
+  -- 2. Get the paginated list of threads and their associated data.
+  SELECT pg_catalog.json_agg(t) INTO threads_json FROM (
+    SELECT
+      p.id, p.board_id, p.thread_id, p.board_post_id, p.user_id, p.image_path, p.comment, p.created_at, p.subject,
+      (SELECT count(*) FROM public.posts r WHERE r.thread_id = p.id AND r.id != p.id) as reply_count,
+      (SELECT count(*) FROM public.posts r WHERE r.thread_id = p.id AND r.id != p.id AND r.image_path IS NOT NULL) as image_reply_count,
+      
+      -- Subquery for the latest 3 replies (unchanged).
+      (
+        SELECT COALESCE(pg_catalog.json_agg(preview_replies), '[]'::json)
+        FROM (
+          SELECT r.id, r.board_post_id, r.comment, r.created_at, r.image_path, r.user_id
+          FROM public.posts r
+          WHERE r.thread_id = p.id AND r.id != p.id
+          ORDER BY r.created_at DESC
+          LIMIT 3
+        ) preview_replies
+      ) as latest_replies,
+
+      -- THE CORRECTED USERS SUBQUERY --
+      (
+        SELECT COALESCE(pg_catalog.json_agg(u), '[]'::json)
+        FROM (
+          SELECT prof.id, prof.username, prof.avatar_url, prof.role
+          FROM public.profiles prof
+          WHERE prof.id IN (
+            -- This sub-subquery now correctly finds all unique user IDs.
+            SELECT DISTINCT participant_user_id
+            FROM (
+              -- Get the OP's user ID
+              SELECT p.user_id as participant_user_id
+              UNION
+              -- Get the user IDs from the latest 3 replies
+              SELECT latest_replies.user_id as participant_user_id
+              FROM (
+                SELECT r.user_id
+                FROM public.posts r
+                WHERE r.thread_id = p.id AND r.id != p.id
+                ORDER BY r.created_at DESC
+                LIMIT 3
+              ) as latest_replies
+            ) as thread_participants
+            WHERE participant_user_id IS NOT NULL
+          )
+        ) u
+      ) as users
+
+    FROM public.posts p
+    WHERE p.board_id = target_board_id AND p.thread_id = p.id -- Find OPs only
+    ORDER BY p.created_at DESC
+    LIMIT p_page_limit
+    OFFSET p_page_offset
+  ) t;
+  
+  -- 3. Get the total thread count.
+  SELECT count(*) INTO total_thread_count FROM public.posts p WHERE p.board_id = target_board_id AND p.thread_id = p.id;
+
+  -- 4. Combine results into a single JSON object.
+  RETURN pg_catalog.json_build_object(
+    'threads', COALESCE(threads_json, '[]'::json),
+    'totalCount', total_thread_count
+  );
 END;
 $$;
 
 
-ALTER FUNCTION "public"."get_threads_by_board_slug"("p_board_slug" "text", "p_page_limit" integer, "p_page_offset" integer) OWNER TO "postgres";
+ALTER FUNCTION "public"."get_threads_by_board_slug2"("p_board_slug" "text", "p_page_limit" integer, "p_page_offset" integer) OWNER TO "postgres";
 
 SET default_tablespace = '';
 
@@ -347,7 +511,9 @@ CREATE TABLE IF NOT EXISTS "public"."posts" (
     "comment" "text",
     "poster_ip" "inet",
     "created_at" timestamp with time zone DEFAULT "now"(),
-    "board_post_id" integer
+    "board_post_id" integer,
+    "subject" "text",
+    CONSTRAINT "subject_only_on_op_check" CHECK ((("thread_id" = "id") OR ("subject" IS NULL)))
 );
 
 
@@ -485,11 +651,18 @@ ALTER TABLE ONLY "public"."profiles"
 
 
 
+CREATE POLICY "Enable read access for all users" ON "public"."app_config" FOR SELECT USING (true);
+
+
+
 CREATE POLICY "Public profiles are viewable by everyone." ON "public"."profiles" FOR SELECT USING (true);
 
 
 
 ALTER TABLE "public"."action_logs" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."app_config" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."profiles" ENABLE ROW LEVEL SECURITY;
@@ -675,7 +848,12 @@ GRANT ALL ON FUNCTION "public"."create_board_post_sequence"() TO "service_role";
 GRANT ALL ON FUNCTION "public"."create_post"("p_board_slug" "text", "p_comment" "text", "p_user_id" "uuid", "p_poster_ip" "inet", "p_thread_id" bigint, "p_image_path" "text") TO "anon";
 GRANT ALL ON FUNCTION "public"."create_post"("p_board_slug" "text", "p_comment" "text", "p_user_id" "uuid", "p_poster_ip" "inet", "p_thread_id" bigint, "p_image_path" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."create_post"("p_board_slug" "text", "p_comment" "text", "p_user_id" "uuid", "p_poster_ip" "inet", "p_thread_id" bigint, "p_image_path" "text") TO "service_role";
-GRANT ALL ON FUNCTION "public"."create_post"("p_board_slug" "text", "p_comment" "text", "p_user_id" "uuid", "p_poster_ip" "inet", "p_thread_id" bigint, "p_image_path" "text") TO "supabase_admin";
+
+
+
+GRANT ALL ON FUNCTION "public"."create_post2"("p_board_slug" "text", "p_comment" "text", "p_user_id" "uuid", "p_poster_ip" "inet", "p_thread_id" bigint, "p_image_path" "text", "p_subject" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."create_post2"("p_board_slug" "text", "p_comment" "text", "p_user_id" "uuid", "p_poster_ip" "inet", "p_thread_id" bigint, "p_image_path" "text", "p_subject" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."create_post2"("p_board_slug" "text", "p_comment" "text", "p_user_id" "uuid", "p_poster_ip" "inet", "p_thread_id" bigint, "p_image_path" "text", "p_subject" "text") TO "service_role";
 
 
 
@@ -688,14 +866,18 @@ GRANT ALL ON FUNCTION "public"."delete_post_storage_object"() TO "service_role";
 GRANT ALL ON FUNCTION "public"."get_thread_by_id"("p_post_id" bigint, "p_replies_limit" integer, "p_replies_offset" integer) TO "anon";
 GRANT ALL ON FUNCTION "public"."get_thread_by_id"("p_post_id" bigint, "p_replies_limit" integer, "p_replies_offset" integer) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_thread_by_id"("p_post_id" bigint, "p_replies_limit" integer, "p_replies_offset" integer) TO "service_role";
-GRANT ALL ON FUNCTION "public"."get_thread_by_id"("p_post_id" bigint, "p_replies_limit" integer, "p_replies_offset" integer) TO "supabase_admin";
 
 
 
 GRANT ALL ON FUNCTION "public"."get_threads_by_board_slug"("p_board_slug" "text", "p_page_limit" integer, "p_page_offset" integer) TO "anon";
 GRANT ALL ON FUNCTION "public"."get_threads_by_board_slug"("p_board_slug" "text", "p_page_limit" integer, "p_page_offset" integer) TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_threads_by_board_slug"("p_board_slug" "text", "p_page_limit" integer, "p_page_offset" integer) TO "service_role";
-GRANT ALL ON FUNCTION "public"."get_threads_by_board_slug"("p_board_slug" "text", "p_page_limit" integer, "p_page_offset" integer) TO "supabase_admin";
+
+
+
+GRANT ALL ON FUNCTION "public"."get_threads_by_board_slug2"("p_board_slug" "text", "p_page_limit" integer, "p_page_offset" integer) TO "anon";
+GRANT ALL ON FUNCTION "public"."get_threads_by_board_slug2"("p_board_slug" "text", "p_page_limit" integer, "p_page_offset" integer) TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_threads_by_board_slug2"("p_board_slug" "text", "p_page_limit" integer, "p_page_offset" integer) TO "service_role";
 
 
 
@@ -735,7 +917,6 @@ GRANT ALL ON TABLE "public"."app_config" TO "service_role";
 GRANT ALL ON SEQUENCE "public"."board_1_post_id_seq" TO "anon";
 GRANT ALL ON SEQUENCE "public"."board_1_post_id_seq" TO "authenticated";
 GRANT ALL ON SEQUENCE "public"."board_1_post_id_seq" TO "service_role";
-GRANT USAGE ON SEQUENCE "public"."board_1_post_id_seq" TO "supabase_admin";
 
 
 

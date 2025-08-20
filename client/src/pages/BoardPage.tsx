@@ -1,58 +1,66 @@
-import { Link, Route, Routes, useParams } from "react-router";
-import { useAppDispatch } from '../store'
-import { useAppSelector } from "../store";
+// src/pages/BoardPage.tsx
+import { Route, Routes, useParams } from "react-router"; // Use react-router-dom
+import { useAppDispatch, useAppSelector } from "../store";
 import { Page404 } from "./Page404";
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import { fetchBoards } from "../slices/boardsSlice";
-import { ActionIcon, AppShell, Button, Center, Divider, Loader, Space, Title, useMantineTheme } from "@mantine/core";
 import { IconHome } from "@tabler/icons-react";
 import { ThreadList } from "../components/ThreadList";
 
+// Import our new styled components
+import {
+  Centered,
+  LoadingIndicator,
+  MainContent,
+  Navbar,
+  NavLink,
+  PageContainer,
+  PageTitle,
+  StyledDivider,
+  VerticalSpace
+} from "./BoardPage.styled";
+
 export function BoardPage() {
-    const theme = useMantineTheme();
+  const { slug } = useParams<{ slug: string }>();
+  const { boards, status } = useAppSelector((state) => state.boards);
+  const currentBoard = boards.find(board => board.slug === slug);
+  const dispatch = useAppDispatch();
 
-    const { slug } = useParams<{ slug: string }>();
-
-    const { boards, status } = useAppSelector((state) => state.boards);
-    const currentBoard = boards.find(board => board.slug === slug);
-    const dispatch = useAppDispatch();
-
-    useEffect(() => {
-        if (status === 'idle') {
-            dispatch(fetchBoards());
-        }
-    }, [status, dispatch]);
-
-
-    if (status === 'loading' || status === 'idle') {
-        return <Center><Loader /></Center>;
+  useEffect(() => {
+    if (status === 'idle') {
+      dispatch(fetchBoards());
     }
+  }, [status, dispatch]);
 
-    if (!currentBoard) {
-        return (<Page404 />)
-    }
-    return (
-        <AppShell style={{ borderColor: theme.colors.borderCol[0] }} navbar={{ width: 45, breakpoint: "sm", collapsed: { mobile: true }, }}>
-            <AppShell.Navbar style={{ borderColor: theme.colors.borderCol[0] }}>
+  if (status === 'loading' || status === 'idle') {
+    return <LoadingIndicator>Loading...</LoadingIndicator>;
+  }
 
-                <ActionIcon size={"xl"} radius={"0"} component={Link} to={"/"}>
-                    <IconHome></IconHome>
-                </ActionIcon>
-            </AppShell.Navbar>
-            <AppShell.Main >
+  if (!currentBoard) {
+    return <Page404 />;
+  }
 
-                <Space h={"lg"} />
-                <Center> <Title order={2} c={theme.colors.textColor[0]}> /{currentBoard.slug}/ : {currentBoard.name} </Title></Center>
+  return (
+    <PageContainer>
+      <Navbar>
+        <NavLink to={"/"}>
+          <IconHome />
+        </NavLink>
+      </Navbar>
 
-                <Divider style={{ borderColor: theme.colors.borderCol[0] }} my="lg" variant='dashed' />
-                <Routes>
-                    <Route path="/" element={<ThreadList slug={currentBoard.slug} />}></Route>
-                    <Route path="/404" element={<>test</>}></Route>
-                </Routes>
+      <MainContent>
+        <VerticalSpace height="20px" /> 
+        <Centered>
+          <PageTitle>/{currentBoard.slug}/ : {currentBoard.name}</PageTitle>
+        </Centered>
 
-            </AppShell.Main>
-        </AppShell>
-    )
-
+        <StyledDivider />
+        
+         <Routes>
+          <Route path="/" element={<ThreadList slug={currentBoard.slug} />} />
+          <Route path="/404" element={<>test</>} />
+        </Routes>
+      </MainContent>
+    </PageContainer>
+  );
 }
-

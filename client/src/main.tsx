@@ -4,14 +4,14 @@ import App from './App.tsx'
 import { Provider } from 'react-redux'; 
 import { store } from './store.ts'; 
 import { MantineProvider } from '@mantine/core';
-import { mantineTheme } from './util/theme.ts';
+//import { mantineTheme } from './util/theme.ts';
 import "./index.css"
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     
     <Provider store={store}>
-      <MantineProvider defaultColorScheme='dark' theme={mantineTheme} >
+      <MantineProvider defaultColorScheme='dark' >
     <App />
       </MantineProvider>
     </Provider>

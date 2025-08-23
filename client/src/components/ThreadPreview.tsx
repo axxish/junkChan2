@@ -7,6 +7,8 @@ import { styled } from "styled-components";
 const PostTitle = styled.h4`
     margin: 0;
     color: ${({ theme }) => theme.colors.postTitle};
+    display: inline-block;
+    padding-right: ${({theme}) => theme.spacing["3xs"]};
   `;
 
 const PostData = styled.span`
@@ -14,11 +16,6 @@ const PostData = styled.span`
   font-size: ${({ theme }) => theme.fontSizes.xs};
 `;
 
-//todo: move to common
-const ProfilePicture = styled(Image)`
-  width: ${({ theme }) => theme.fontSizes.xs};
-  display: inline;
-  `;
 
 export function ThreadPreviewComponent({ thread }: { thread: ThreadPreview }) {
   const { users } = thread;
@@ -41,20 +38,14 @@ export function ThreadPreviewComponent({ thread }: { thread: ThreadPreview }) {
   if (!op) {
     op = { id: "null", username: "Anonymous", avatar_url: "", role: "USER" };
   }
-  let imgTag;
-  if (op.avatar_url) {
-
-    imgTag = (<ProfilePicture src={op.avatar_url}></ProfilePicture>);
-  }
-
 
   return (
     <Stack $justify="flex-start" $align="flex-start" $p="sm">
-      <Group $gap={"xs"} $align="flex-end">
-        <PostTitle>{thread.subject}</PostTitle>
-        <PostData>by   {imgTag} {op.username} at: {dateString} [<Anchor $s={"md"} to="">Join the discussion</Anchor>]
+      <div style={{display:"inline-block"}}>
+        <PostTitle>{thread.subject} <br></br></PostTitle>
+        <PostData>by  {op.username} at: {dateString} [<Anchor $s={"xs"} to=""> View </Anchor>]
         </PostData>
-      </Group>
+      </div>
       <Group $gap="sm" >
         {thread.image_url && <Image src={thread.image_url} style={{ maxWidth: "200px" }} alt="Thread image" />}
         <Text>{thread.comment}</Text>

@@ -20,21 +20,12 @@ export interface ReplyPreview {
 
 
 
-export interface Thread {
-  id: number;
-  board_id: number;
-  thread_id: number;
-  board_post_id: number;
-  user_id: string | null;
-  image_path: string; // OPs always have an image path from the DB
-  comment: string | null;
-  created_at: string;
-  subject: string | null;
+export interface Thread{
+  op: Post; // The OP is now a nested object of type Post
   reply_count: number;
   image_reply_count: number;
   latest_replies: ReplyPreview[];
-  users: UserProfile[]; 
-  image_url?: string; 
+  users: Record<string, UserProfile>;
 }
 
 export interface Post {

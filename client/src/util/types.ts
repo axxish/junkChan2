@@ -24,22 +24,14 @@ export interface ReplyPreview {
 }
 
 
-export interface ThreadPreview {
-  id: number;
-  board_id: number;
-  thread_id: number;
-  board_post_id: number;
-  user_id: string | null; 
-  comment: string | null;
-  created_at: string;
-  subject: string | null; 
+export interface Thread {
+  op: Post;
   reply_count: number;
   image_reply_count: number;
-  image_url: string;      
-  
+       
   // Enriched preview data from the API:
   latest_replies: ReplyPreview[]; 
-  users: UserProfile[];           
+  users: Record<string, UserProfile>;           
 }
 
 
@@ -68,5 +60,5 @@ export interface FullThread {
   op: Post;
   replies: Reply[];
   totalReplyCount: number;
-  users: UserProfile[];
+  users: Record<string, UserProfile>;
 }

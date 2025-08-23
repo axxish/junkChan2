@@ -1,19 +1,19 @@
 // src/components/ThreadList.tsx
 import { memo, useEffect, useState } from "react";
 import apiClient from "../util/axiosClient";
-import type { ThreadPreview } from "../util/types";
+import type { Thread } from "../util/types";
 import { ThreadPreviewComponent } from "./ThreadPreview";
 import { FlexContainer } from "./FlexContainer";
 import { Divider, StatusText, ErrorBox } from "./Common";
 
 interface ApiResponse {
-  data: ThreadPreview[];
+  data: Thread[];
   meta: any;
 }
 
 
 const _ThreadList = ({ slug }: { slug: string }) => {
-  const [threads, setThreads] = useState<ThreadPreview[]>([]);
+  const [threads, setThreads] = useState<Thread[]>([]);
   const [status, setStatus] = useState<'idle' | 'loading' | 'succeeded' | 'failed'>('idle');
   const [error, setError] = useState<string | null>(null);
 
@@ -53,7 +53,7 @@ const _ThreadList = ({ slug }: { slug: string }) => {
     return (
 
       <FlexContainer $p="0" style={{ margin: "0" }} $direction="column" $justify="flex-start" $align="flex-start">
-        {threads.map((thread) => (<div key={thread.id} style={{width:"100%"}}>
+        {threads.map((thread) => (<div key={thread.op.id} style={{width:"100%"}}>
           <ThreadPreviewComponent thread={thread} />
           <Divider />
         </div>

@@ -40,10 +40,12 @@ async function handleGetBoardThreads(req: Request, supabaseAdmin: SupabaseClient
   
   // 4. Process the data: add full public URLs for all images (OPs and replies).
   const threadsWithUrls = threads.map((thread: Thread) => {
+    console.log(thread);
+
     // Add image_url to the OP
-    if (thread.image_path) {
-      const { data: urlData } = supabaseAdmin.storage.from('posts').getPublicUrl(thread.image_path);
-      thread.image_url = urlData.publicUrl;
+    if (thread.op.image_path) {
+      const { data: urlData } = supabaseAdmin.storage.from('posts').getPublicUrl(thread.op.image_path);
+      thread.op.image_url = urlData.publicUrl;
     }
     
     // Add image_url to any preview replies that have an image

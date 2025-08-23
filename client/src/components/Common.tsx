@@ -33,7 +33,6 @@ export const Paper = styled.div`
   background-color: ${({ theme }) => theme.colors.paperBg};
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 0;
-  max-height: 500px;
 `;
 
 
@@ -41,34 +40,34 @@ export const Title = styled.h5`
   color: ${({ theme }) => theme.colors.text};
   text-align: center;
   margin: 0;
-  padding-top: ${({theme}) => theme.spacing["2xs"]};
-  padding-bottom: ${({theme}) => theme.spacing["2xs"]};
+  padding-top: ${({ theme }) => theme.spacing["2xs"]};
+  padding-bottom: ${({ theme }) => theme.spacing["2xs"]};
   font-size: ${({ theme }) => theme.fontSizes.lg};
   font-weight: bold;
 `;
 
-interface DividerProps{
+interface DividerProps {
   $width?: CSSProperties["width"];
 }
 
 export const Divider = styled.hr<DividerProps>`
   border: 0;
   border-top: 2px dashed ${({ theme }) => theme.colors.border};
-  width: ${({$width : width})=>width || "100%"};
+  width: ${({ $width: width }) => width || "100%"};
   margin: 0;
 `;
 
 
-export const Anchor = styled(Link)<{$s?:string}>`
-  color: ${({  theme }) => theme.colors.link};
+export const Anchor = styled(Link) <{ $s?: FontSizeKey | CSSProperties["fontSize"] }>`
+  color: ${({ theme }) => theme.colors.link};
   text-decoration: none;
-  font-size: ${({ $s:fs, theme }) => {
-    
-    if(!fs){
-    return theme.fontSizes.md;
+  font-size: ${({ $s: fs, theme }) => {
+
+    if (!fs) {
+      return theme.fontSizes.md;
     }
 
-    if(isFontSizeKey(fs, theme.fontSizes)){
+    if (isFontSizeKey(fs, theme.fontSizes)) {
       return theme.fontSizes[fs];
     }
     return "0";
@@ -79,9 +78,10 @@ export const Anchor = styled(Link)<{$s?:string}>`
   backface-visibility: hidden;
   &:hover {
     filter: brightness(${({ theme }) => (
-      theme.colors.anchorBrightness
-    )});
+    theme.colors.anchorBrightness
+  )});
     transform: scale(1.06);
+    text-decoration: underline;
   }
 `;
 
@@ -98,7 +98,7 @@ export const ErrorBox = styled.div`
   padding: ${({ theme }) => theme.spacing.md};
   margin: ${({ theme }) => theme.spacing.md} 0;
   border-radius: 4px;
-  ${({ theme }) => theme.name==="dark" && `
+  ${({ theme }) => theme.name === "dark" && `
     background-color: #4d1818;
     border-color: #a63e3e;
     border-left-color: #e03131;
@@ -107,10 +107,18 @@ export const ErrorBox = styled.div`
 `;
 
 
-export const Text = styled.p`
+export const Text = styled.p<{ $s?: FontSizeKey | CSSProperties["fontSize"] }>`
   margin: 0; 
   color: ${({ theme }) => theme.colors.text};
-  font-size: ${({ theme }) => theme.fontSizes.sm};
+  font-size: ${({ $s: s, theme }) => {
+    if (!s) {
+      return theme.fontSizes.sm;
+    }
+    if (isFontSizeKey(s, theme.fontSizes)) {
+      return theme.fontSizes[s];
+    }
+    return s;
+  }};
   line-height: 1.5;
 `;
 
@@ -119,11 +127,11 @@ export const Image = styled.img`
   display: block;
 `;
 
-export const Center = styled.div<{$width?: CSSProperties['width']}>`
+export const Center = styled.div<{ $width?: CSSProperties['width'] }>`
   display: flex;
   align-items: center;
   justify-content: center;
-  width: ${({$width:width}) => width || "100%"};
+  width: ${({ $width: width }) => width || "100%"};
 `;
 
 

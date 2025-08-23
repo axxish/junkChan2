@@ -1,21 +1,10 @@
 // src/components/ThreadPreview.tsx (or wherever it's located)
 import { type Thread, type UserProfile } from "../util/types";
-import { Group, Stack } from "./FlexContainer";
-import { Text, Image, Title, Anchor, StatusText } from "./Common";
-import { styled } from "styled-components";
+
+import { Text, Image, Title, Anchor, StatusText, Space } from "./Common";
+
 import { PostView } from "./PostView";
 
-const PostTitle = styled.h4`
-    margin: 0;
-    color: ${({ theme }) => theme.colors.postTitle};
-    display: inline-block;
-    padding-right: ${({ theme }) => theme.spacing["3xs"]};
-  `;
-
-const PostData = styled.span`
-  color: ${({ theme }) => theme.colors.greyText};
-  font-size: ${({ theme }) => theme.fontSizes.xs};
-`;
 
 
 export function ThreadPreviewComponent({ thread }: { thread: Thread }) {
@@ -30,7 +19,18 @@ export function ThreadPreviewComponent({ thread }: { thread: Thread }) {
     op = users[thread.op.user_id];
   }
 
+
+
   return (
-   <PostView p={thread.op} u={op}></PostView>
+    <>
+      <PostView p={thread.op} u={op} action={{type:"View", post_id: thread.op.thread_id}}></PostView>
+      {thread.latest_replies.map((reply) => {
+        if (reply.user_id !== null) {
+          return (<PostView key={reply.id} p={reply} u={users[reply.user_id]} isReply></PostView>);
+        }
+        return (<PostView key={reply.id} p={reply} isReply></PostView>)
+      })}
+      <Space></Space>
+    </>
   );
 }

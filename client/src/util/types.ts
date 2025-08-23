@@ -14,14 +14,6 @@ export interface UserProfile {
 }
 
 
-export interface ReplyPreview {
-  id: number;
-  board_post_id: number;
-  comment: string | null;
-  created_at: string;
-  user_id: string | null; 
-  image_url?: string;   
-}
 
 
 export interface Thread {
@@ -30,7 +22,7 @@ export interface Thread {
   image_reply_count: number;
        
   // Enriched preview data from the API:
-  latest_replies: ReplyPreview[]; 
+  latest_replies: Reply[]; 
   users: Record<string, UserProfile>;           
 }
 
@@ -62,3 +54,8 @@ export interface FullThread {
   totalReplyCount: number;
   users: Record<string, UserProfile>;
 }
+
+export interface PostViewAction{
+  type: 'View' | 'Reply';
+  post_id: number;
+};

@@ -9,16 +9,13 @@ import { ThreadList } from "../components/ThreadList";
 
 // Import our new styled components
 import {
-  Centered,
-  LoadingIndicator,
   MainContent,
   Navbar,
   NavLink,
   PageContainer,
-  PageTitle,
-  StyledDivider,
-  VerticalSpace
+  PageTitle
 } from "./BoardPage.styled";
+import { Divider, StatusText, Center, Space } from "../components/Common";
 
 export function BoardPage() {
   const { slug } = useParams<{ slug: string }>();
@@ -33,7 +30,7 @@ export function BoardPage() {
   }, [status, dispatch]);
 
   if (status === 'loading' || status === 'idle') {
-    return <LoadingIndicator>Loading...</LoadingIndicator>;
+    return <StatusText>Loading...</StatusText>;
   }
 
   if (!currentBoard) {
@@ -49,14 +46,15 @@ export function BoardPage() {
       </Navbar>
 
       <MainContent>
-        <VerticalSpace height="20px" /> 
-        <Centered>
+        <Space />
+        <Center $width="100%">
           <PageTitle>/{currentBoard.slug}/ : {currentBoard.name}</PageTitle>
-        </Centered>
+         
+        </Center>
+           <Space />
+        <Divider />
 
-        <StyledDivider />
-        
-         <Routes>
+        <Routes>
           <Route path="/" element={<ThreadList slug={currentBoard.slug} />} />
           <Route path="/404" element={<>test</>} />
         </Routes>

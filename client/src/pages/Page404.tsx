@@ -1,4 +1,4 @@
-import { Paper, Title } from "@mantine/core";
+import { Paper, Title } from "../components/Common";
 
 export function Page404(){
 

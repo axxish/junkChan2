@@ -18,9 +18,7 @@ export const themeSlice = createSlice({
     initialState,
     reducers: {
         toggleColorScheme: (state) => {
-            
             state.colorScheme = state.colorScheme === "dark" ? "light" : "dark";
-            console.log(state.colorScheme);
         },
     },
 });

@@ -11,7 +11,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@mantine/core": "^8.2.4",
     "@mantine/form": "^8.2.4",
     "@mantine/hooks": "^8.2.4",
     "@reduxjs/toolkit": "^2.8.2",

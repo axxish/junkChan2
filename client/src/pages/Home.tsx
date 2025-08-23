@@ -4,14 +4,15 @@ import { useAppDispatch, useAppSelector } from '../store';
 import { fetchBoards } from '../slices/boardsSlice';
 
 import {
-  StyledContainer,
-  StyledPaper,
-  StyledTitle,
-  StyledDivider,
-  BoardsFlexContainer,
-  BoardLink,
+  Container,
+  Paper,
+  Title,
+  Divider,
+  Anchor,
   StatusText,
-} from './Home.styled';
+} from '../components/Common';
+
+import { FlexContainer } from '../components/FlexContainer';
 
 export function Home() {
   const dispatch = useAppDispatch();
@@ -29,9 +30,9 @@ export function Home() {
   }
   if (status === 'succeeded') {
     boardsContent = boards.map((board) => (
-      <BoardLink key={board.id} to={`/boards/${board.slug}`}>
+      <Anchor key={board.id} to={`/boards/${board.slug}`}>
         {board.name}
-      </BoardLink>
+      </Anchor>
     ));
   }
   if (status === 'failed') {
@@ -39,12 +40,12 @@ export function Home() {
   }
 
   return (
-    <StyledContainer>
-      <StyledPaper>
-        <StyledTitle>Boards</StyledTitle>
-        <StyledDivider />
-        <BoardsFlexContainer>{boardsContent}</BoardsFlexContainer>
-      </StyledPaper>
-    </StyledContainer>
+    <Container>
+      <Paper>
+        <Title>Boards</Title>
+        <Divider />
+        <FlexContainer $p="md">{boardsContent}</FlexContainer>
+      </Paper>
+    </Container>
   );
 }

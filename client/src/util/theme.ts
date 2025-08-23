@@ -1,121 +1,81 @@
-import {
-  Card,
-  colorsTuple,
-  Container,
-  createTheme,
-  Divider,
-  getThemeColor,
-  Paper,
-  rem,
-  Select,
-  virtualColor,
-} from "@mantine/core";
-import type { MantineThemeOverride } from "@mantine/core";
+import { createGlobalStyle } from "styled-components";
 
-const CONTAINER_SIZES: Record<string, string> = {
-  xxs: rem("200px"),
-  xs: rem("300px"),
-  sm: rem("400px"),
-  md: rem("500px"),
-  lg: rem("600px"),
-  xl: rem("1400px"),
-  xxl: rem("1600px"),
+const rem = (px: number) => `${px / 16}rem`;
+
+const fontSizes = {
+  xs: rem(12),
+  sm: rem(14),
+  md: rem(15),
+  lg: rem(18),
+  xl: rem(20),
+  "2xl": rem(24),
 };
 
-export const  mantineTheme:MantineThemeOverride = createTheme({
-  fontSizes: {
-    xs: rem("12px"),
-    sm: rem("14px"),
-    md: rem("16px"),
-    lg: rem("18px"),
-    xl: rem("20px"),
-    "2xl": rem("24px"),
-    "3xl": rem("30px"),
-    "4xl": rem("36px"),
-    "5xl": rem("48px"),
-  },
-  spacing: {
-    "3xs": rem("4px"),
-    "2xs": rem("8px"),
-    xs: rem("10px"),
-    sm: rem("12px"),
-    md: rem("16px"),
-    lg: rem("20px"),
-    xl: rem("24px"),
-    "2xl": rem("28px"),
-    "3xl": rem("32px"),
-  },
-  colors: {
-    discordWhiteText: colorsTuple("#dadadc"),
-    darkBorder: colorsTuple("#424242"),
-    darkBg: colorsTuple("#2e2e2e"),
-    fourchBg: colorsTuple("#e5e9fa"),
-    fourchBorder: colorsTuple("#B7C5D9"),
-    darkIndigo: colorsTuple("#3a59d6ff"),
-    lightIndigo: colorsTuple("#748ffc"),
-    linkColor: virtualColor({
-      name: 'linkColor',
-      light: 'darkIndigo',
-      dark: 'lightIndigo'
-    }),
-    paperBg: virtualColor({
-      name: 'paperBg',
-      light: 'fourchBg',
-      dark: 'darkBg'
-    }),
-    'borderCol': virtualColor({
-      name: 'borderCol',
-      light: 'fourchBorder',
-      dark: 'darkBorder',
-    }),
-    textColor: virtualColor({
-      name:  'textColor',
-      light: 'black',
-      dark: 'discordWhiteText'
-    }),
-  },
-  primaryColor: "indigo",
-  components: {
-    Container: Container.extend({
-      vars: (_, { size, fluid }) => ({
-        root: {
-          "--container-size": fluid
-            ? "100%"
-            : size !== undefined && size in CONTAINER_SIZES
-            ? CONTAINER_SIZES[size]
-            : rem(size),
-        },
-      }),
-    }),
-    Paper: Paper.extend({
-      
-      defaultProps: {
-        bg: 'paperBg',
-        p: "md",
-        shadow: "xl",
-        radius: "md",
-        withBorder: true,
-      },
-    }),
+const spacing = {
+  "3xs": rem(4),
+  "2xs": rem(8),
+  xs: rem(10),
+  sm: rem(12),
+  md: rem(16),
+  lg: rem(20),
+  xl: rem(24),
+};
 
-    Card: Card.extend({
-      defaultProps: {
-        p: "xl",
-        shadow: "xl",
-        radius: "var(--mantine-radius-default)",
-        withBorder: true,
-      },
-    }),
-    Select: Select.extend({
-      defaultProps: {
-        checkIconPosition: "right",
-      },
-    }),
-    Divider: Divider.extend({
-      
-    })
+const containerSizes: Record<string, string> = {
+  xxs: rem(200),
+  xs: rem(300),
+  sm: rem(400),
+  md: rem(500),
+  lg: rem(600),
+  xl: rem(1400),
+  xxl: rem(1600),
+};
+
+export const lightTheme = {
+  name: "light",
+  fontSizes,
+  spacing,
+  containerSizes,
+  colors: {
+    background: "#e5e9fa",
+    text: "#000000",
+    border: "#B7C5D9",
+    link: "#3a59d6",
+    paperBg: "#e5e9fa",
+    postTitle: "#0F0C5D",
+    greyText: "#4d4d4dff",
+    anchorBrightness: 0.7,
   },
-  other: {
-    style: "mantine",
+};
+
+export const darkTheme = {
+  name: "dark",
+  fontSizes,
+  spacing,
+  containerSizes,
+  colors: {
+    background: "#171717",
+    text: "#dadadc",
+    border: "#424242",
+    link: "#748ffc",
+    paperBg: "#1f1f1f",
+    postTitle: "#b1b1b1ff",
+    greyText: "#9b9b9bff",
+    anchorBrightness: 1.3,
   },
-});
+};
+
+export type AppTheme = typeof lightTheme;
+
+// --- Global Style Component ---
+export const GlobalStyle = createGlobalStyle`
+  body {
+    background-color: ${({ theme }) => theme.colors.background};
+    color: ${({ theme }) => theme.colors.text};
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+      'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+      sans-serif;
+  
+  }
+`;

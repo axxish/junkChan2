@@ -5,7 +5,7 @@ import { Home } from './pages/Home';
 import { BrowserRouter, Routes, Route } from 'react-router';
 import { IconMoon } from "@tabler/icons-react";
 import { BoardPage } from './pages/BoardPage';
-import { darkTheme, GlobalStyle, lightTheme } from './util/styledTheme'; // Adjust path
+import { darkTheme, GlobalStyle, lightTheme } from './util/theme'; // Adjust path
 import styled, { ThemeProvider } from 'styled-components'; // <-- Import styled
 import { useAppDispatch, useAppSelector } from './store';
 import { selectColorScheme, toggleColorScheme } from './slices/themeSlice';
@@ -21,27 +21,26 @@ const ThemeToggleButton = styled.button`
 
   width: 44px;  
   height: 44px;
-  border-radius: 50%; // For a perfect circle
-  
-  /* Appearance */
-  background-color: #3a59d6; // A default indigo color, can be themed later if needed
+  border-radius: 50%; 
+
+  background-color: #3a59d6; 
   color: white;
   border: none;
   cursor: pointer;
 
-  /* Flexbox for centering the icon */
+  
   display: flex;
   align-items: center;
   justify-content: center;
 
-  /* Smooth transition for hover effect */
+
   transition: background-color 0.2s ease;
 
   &:hover {
-    background-color: #364fc7; // A slightly darker indigo
+    background-color: #364fc7; 
   }
 
-  /* Hiding on small screens, equivalent to 'visibleFrom="sm"' */
+
   @media (max-width: 768px) { // Assuming 'sm' breakpoint is 768px. Adjust if necessary.
     display: none;
   }

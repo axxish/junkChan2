@@ -41,7 +41,7 @@ export function Home() {
 
   return (
     <Container>
-      <Paper>
+      <Paper $p={"0"}>
         <Title>Boards</Title>
         <Divider />
         <FlexContainer $p="md">{boardsContent}</FlexContainer>

@@ -19,6 +19,7 @@ const PostData = styled.span`
 
 const PostPaper = styled(Paper)`
     width: fit-content;
+    padding: 0;
     background-color: ${({theme})=>theme.colors.replyBg};
 `;
 

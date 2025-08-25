@@ -1,6 +1,6 @@
 import { Link } from "react-router";
 import { styled, type CSSProperties, type DefaultTheme } from "styled-components";
-import { lightTheme } from "../util/theme";
+import { darkTheme, lightTheme } from "../util/theme";
 
 export type SpacingKey = keyof DefaultTheme['spacing'];
 
@@ -29,10 +29,20 @@ export const Container = styled.div`
     theme.spacing.md};
 `;
 
-export const Paper = styled.div`
+export const Paper = styled.div<{$p?:CSSProperties["padding"]}>`
   background-color: ${({ theme }) => theme.colors.paperBg};
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 0;
+  padding: ${({$p, theme})=>{
+    if (!$p) {
+      return theme.spacing.sm;
+    }
+    if (isSpacingKey($p, theme.spacing)) {
+
+      return theme.spacing[$p];
+    }
+    return $p;
+  }};
 `;
 
 
@@ -110,7 +120,7 @@ export const ErrorBox = styled.div`
 `;
 
 
-export const Text = styled.p<{ $s?: FontSizeKey | CSSProperties["fontSize"] }>`
+export const Text = styled.p<{ $s?: FontSizeKey | CSSProperties["fontSize"], $ta?: CSSProperties["textAlign"] }>`
   margin: 0; 
   color: ${({ theme }) => theme.colors.text};
   font-size: ${({ $s: s, theme }) => {
@@ -122,6 +132,14 @@ export const Text = styled.p<{ $s?: FontSizeKey | CSSProperties["fontSize"] }>`
     }
     return s;
   }};
+
+  text-align: ${({$ta:ta})=>{
+    if(ta){
+      return ta;
+    }
+    return "left";
+  }};
+
   line-height: 1.5;
 `;
 
@@ -132,6 +150,7 @@ export const Image = styled.img`
 
 export const Center = styled.div<{ $width?: CSSProperties['width'] }>`
   display: flex;
+
   align-items: center;
   justify-content: center;
   width: ${({ $width: width }) => width || "100%"};
@@ -149,6 +168,7 @@ export const Space = styled.div<{ $height?: SpacingKey | CSSProperties["height"]
     }
     return h;
   }};
+  min-width: 1px;
 `;
 
 
@@ -156,3 +176,32 @@ export const PageTitle = styled.h2`
   color: ${({ theme }) => theme.colors.text};
   margin: 0;
 `;
+
+export const Input = styled.input`
+  background-color: ${({theme})=>{
+    if(theme.name==="dark"){
+
+     return "#0000" ;
+    }
+  
+  }};
+
+  color: ${({theme})=>theme.colors.text};
+
+  padding: ${({theme})=>theme.spacing["3xs"]};
+  border-width: 1px;
+  border-style: solid;
+  border-color: ${({theme})=>theme.colors.border};
+  &:focus{
+    outline: ${({theme})=>{
+      if(theme.name==="dark"){
+        return "1px solid " + theme.colors.link;
+      }
+    }}
+  }
+
+`;
+
+export const Button = styled.button`
+  
+`

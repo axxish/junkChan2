@@ -201,22 +201,17 @@ $$;
 ALTER FUNCTION "public"."create_post2"("p_board_slug" "text", "p_comment" "text", "p_user_id" "uuid", "p_poster_ip" "inet", "p_thread_id" bigint, "p_image_path" "text", "p_subject" "text") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."delete_post_storage_object"() RETURNS "trigger"
+CREATE OR REPLACE FUNCTION "public"."delete_storage_object_from_path"("p_path" "text") RETURNS "void"
     LANGUAGE "plpgsql" SECURITY DEFINER
-    SET "search_path" TO ''
     AS $$
 BEGIN
-  -- Check if the post being deleted actually has an image.
-  IF OLD.image_path IS NOT NULL THEN
-    -- Delete the object from the 'posts' bucket in Supabase Storage.
-    PERFORM storage.delete_object('posts', OLD.image_path);
-  END IF;
-  RETURN OLD;
+  -- We call a more specific version of delete_object, providing the bucket name.
+  PERFORM storage.delete_object('posts', p_path);
 END;
 $$;
 
 
-ALTER FUNCTION "public"."delete_post_storage_object"() OWNER TO "postgres";
+ALTER FUNCTION "public"."delete_storage_object_from_path"("p_path" "text") OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."get_thread_by_id"("p_post_id" bigint, "p_replies_limit" integer, "p_replies_offset" integer) RETURNS json
@@ -253,20 +248,19 @@ BEGIN
       ),
       'totalReplyCount', (SELECT count(*) FROM public.posts WHERE thread_id = p_post_id AND id != p_post_id),
     'users', (
-     SELECT COALESCE(json_agg(u), '[]'::json)
-        FROM (
-          SELECT
-
-            prof.id,
-            prof.username,
-            prof.avatar_url,
-            prof.role
-          FROM public.profiles prof
-          -- This subquery now finds ALL unique user IDs in the entire thread
-          WHERE prof.id IN (
-            SELECT DISTINCT user_id FROM public.posts
-            WHERE (posts.thread_id = p_post_id OR posts.id = p_post_id) AND posts.user_id IS NOT NULL
-          )
+        -- The outer select simply gets the result from the inner one.
+        SELECT * FROM (
+          -- We do the aggregation INSIDE the subquery where 'prof' is defined.
+          SELECT COALESCE(pg_catalog.json_object_agg(prof.id, prof), '{}'::json)
+          FROM (
+              SELECT p_inner.id, p_inner.username, p_inner.avatar_url, p_inner.role
+              FROM public.profiles p_inner
+              WHERE p_inner.id IN (
+                -- This subquery finds all unique user IDs in the entire thread
+                SELECT DISTINCT user_id FROM public.posts
+                WHERE (thread_id = p_post_id OR id = p_post_id) AND user_id IS NOT NULL
+              )
+          ) prof
         ) u
     )
 
@@ -357,7 +351,7 @@ BEGIN
   -- 2. Get the paginated list of threads and their associated data.
   SELECT pg_catalog.json_agg(t) INTO threads_json FROM (
     SELECT
-      p.id, p.board_id, p.thread_id, p.board_post_id, p.user_id, p.image_path, p.comment, p.created_at, p.subject,
+      (SELECT pg_catalog.to_json(op) FROM (SELECT p.id, p.board_id, p.thread_id, p.board_post_id, p.user_id, p.image_path, p.comment, p.created_at, p.subject) op) as op,
       (SELECT count(*) FROM public.posts r WHERE r.thread_id = p.id AND r.id != p.id) as reply_count,
       (SELECT count(*) FROM public.posts r WHERE r.thread_id = p.id AND r.id != p.id AND r.image_path IS NOT NULL) as image_reply_count,
       
@@ -374,31 +368,21 @@ BEGIN
       ) as latest_replies,
 
       -- THE CORRECTED USERS SUBQUERY --
+      -- THE KEY CHANGE: Use json_object_agg to create a map instead of a list.
       (
-        SELECT COALESCE(pg_catalog.json_agg(u), '[]'::json)
+        SELECT COALESCE(pg_catalog.json_object_agg(prof.id, prof), '{}'::json)
         FROM (
           SELECT prof.id, prof.username, prof.avatar_url, prof.role
           FROM public.profiles prof
           WHERE prof.id IN (
-            -- This sub-subquery now correctly finds all unique user IDs.
-            SELECT DISTINCT participant_user_id
-            FROM (
-              -- Get the OP's user ID
+            SELECT DISTINCT participant_user_id FROM (
               SELECT p.user_id as participant_user_id
               UNION
-              -- Get the user IDs from the latest 3 replies
-              SELECT latest_replies.user_id as participant_user_id
-              FROM (
-                SELECT r.user_id
-                FROM public.posts r
-                WHERE r.thread_id = p.id AND r.id != p.id
-                ORDER BY r.created_at DESC
-                LIMIT 3
-              ) as latest_replies
+              SELECT lr.user_id as participant_user_id FROM (SELECT r.user_id FROM public.posts r WHERE r.thread_id = p.id AND r.id != p.id ORDER BY r.created_at DESC LIMIT 3) as lr
             ) as thread_participants
             WHERE participant_user_id IS NOT NULL
           )
-        ) u
+        ) prof
       ) as users
 
     FROM public.posts p
@@ -513,7 +497,8 @@ CREATE TABLE IF NOT EXISTS "public"."posts" (
     "created_at" timestamp with time zone DEFAULT "now"(),
     "board_post_id" integer,
     "subject" "text",
-    CONSTRAINT "subject_only_on_op_check" CHECK ((("thread_id" = "id") OR ("subject" IS NULL)))
+    CONSTRAINT "subject_only_on_op_check" CHECK ((("thread_id" = "id") OR ("subject" IS NULL))),
+    CONSTRAINT "subject_required_for_op_check" CHECK ((("thread_id" <> "id") OR ("subject" IS NOT NULL)))
 );
 
 
@@ -608,10 +593,6 @@ CREATE UNIQUE INDEX "posts_unique_non_null_image_path" ON "public"."posts" USING
 
 
 
-CREATE OR REPLACE TRIGGER "before_delete_post" BEFORE DELETE ON "public"."posts" FOR EACH ROW EXECUTE FUNCTION "public"."delete_post_storage_object"();
-
-
-
 CREATE OR REPLACE TRIGGER "on_board_creation" AFTER INSERT ON "public"."boards" FOR EACH ROW EXECUTE FUNCTION "public"."create_board_post_sequence"();
 
 
@@ -665,6 +646,15 @@ ALTER TABLE "public"."action_logs" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."app_config" ENABLE ROW LEVEL SECURITY;
 
 
+ALTER TABLE "public"."boards" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."post_mentions" ENABLE ROW LEVEL SECURITY;
+
+
+ALTER TABLE "public"."posts" ENABLE ROW LEVEL SECURITY;
+
+
 ALTER TABLE "public"."profiles" ENABLE ROW LEVEL SECURITY;
 
 
@@ -680,12 +670,6 @@ GRANT USAGE ON SCHEMA "public" TO "postgres";
 GRANT USAGE ON SCHEMA "public" TO "anon";
 GRANT USAGE ON SCHEMA "public" TO "authenticated";
 GRANT USAGE ON SCHEMA "public" TO "service_role";
-
-
-
-
-
-
 
 
 
@@ -857,9 +841,9 @@ GRANT ALL ON FUNCTION "public"."create_post2"("p_board_slug" "text", "p_comment"
 
 
 
-GRANT ALL ON FUNCTION "public"."delete_post_storage_object"() TO "anon";
-GRANT ALL ON FUNCTION "public"."delete_post_storage_object"() TO "authenticated";
-GRANT ALL ON FUNCTION "public"."delete_post_storage_object"() TO "service_role";
+GRANT ALL ON FUNCTION "public"."delete_storage_object_from_path"("p_path" "text") TO "anon";
+GRANT ALL ON FUNCTION "public"."delete_storage_object_from_path"("p_path" "text") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."delete_storage_object_from_path"("p_path" "text") TO "service_role";
 
 
 
@@ -917,6 +901,7 @@ GRANT ALL ON TABLE "public"."app_config" TO "service_role";
 GRANT ALL ON SEQUENCE "public"."board_1_post_id_seq" TO "anon";
 GRANT ALL ON SEQUENCE "public"."board_1_post_id_seq" TO "authenticated";
 GRANT ALL ON SEQUENCE "public"."board_1_post_id_seq" TO "service_role";
+GRANT USAGE ON SEQUENCE "public"."board_1_post_id_seq" TO "supabase_admin";
 
 
 

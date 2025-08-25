@@ -1,8 +1,7 @@
 import { type Post, type PostViewAction, type UserProfile } from "../util/types";
 import { Group, Stack } from "./FlexContainer";
-import { Text, Image, Title, Anchor, StatusText, Paper } from "./Common";
+import { Text, Image,Anchor, StatusText, Paper } from "./Common";
 import { styled } from "styled-components";
-import type { JSX } from "react";
 
 const PostTitle = styled.h3`
     margin: 0;

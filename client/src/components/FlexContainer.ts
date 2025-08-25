@@ -1,5 +1,5 @@
 // src/pages/Home.styled.ts
-import styled, { type CSSProperties, type DefaultTheme } from "styled-components";
+import styled, { type CSSProperties} from "styled-components";
 import { type SpacingKey, isSpacingKey } from "./Common";
 interface FlexContainerProps {
   $justify?: CSSProperties["justifyContent"];

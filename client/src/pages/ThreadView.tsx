@@ -3,7 +3,6 @@ import { useParams } from "react-router";
 import apiClient from "../util/axiosClient";
 import type { FullThread, UserProfile } from "../util/types";
 import { Space, StatusText } from "../components/Common";
-import { FlexContainer } from "../components/FlexContainer";
 import { PostView } from "../components/PostView";
 
 

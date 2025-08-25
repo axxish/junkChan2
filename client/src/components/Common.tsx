@@ -1,6 +1,5 @@
 import { Link } from "react-router";
 import { styled, type CSSProperties, type DefaultTheme } from "styled-components";
-import { darkTheme, lightTheme } from "../util/theme";
 
 export type SpacingKey = keyof DefaultTheme['spacing'];
 

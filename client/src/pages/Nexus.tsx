@@ -1,11 +1,5 @@
 // src/pages/BoardPage.tsx
-import { Outlet, Route, Routes, useParams } from "react-router"; // Use react-router-dom
-import { useAppDispatch, useAppSelector } from "../store";
-import { Page404 } from "./Page404";
-import { useEffect } from "react";
-import { fetchBoards } from "../slices/boardsSlice";
-import { IconHome } from "@tabler/icons-react";
-import { ThreadList } from "./ThreadList";
+import { Outlet} from "react-router"; // Use react-router-dom
 
 // Import our new styled components
 import {
@@ -13,7 +7,7 @@ import {
   Navbar,
   PageContainer
 } from "./Nexus.styled";
-import { Anchor, Center, Space } from "../components/Common";
+import { Anchor, Space } from "../components/Common";
 
 export function Nexus() {
 

@@ -45,7 +45,7 @@ export const lightTheme = {
     replyBg: "#d6daf0",
     postTitle: "#0F0C5D",
     greyText: "#4d4d4dff",
-    anchorBrightness: 0.7,
+    anchorBrightness: 0.3,
   },
 };
 

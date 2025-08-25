@@ -2,9 +2,10 @@
 import { memo, useEffect, useState } from "react";
 import apiClient from "../util/axiosClient";
 import type { Thread } from "../util/types";
-import { ThreadPreviewComponent } from "./ThreadPreview";
-import { FlexContainer } from "./FlexContainer";
-import { Divider, StatusText, ErrorBox } from "./Common";
+import { ThreadPreviewComponent } from "../components/ThreadPreview";
+import { FlexContainer } from "../components/FlexContainer";
+import { Divider, StatusText, ErrorBox, Space, Center, PageTitle } from "../components/Common";
+import { useParams } from "react-router";
 
 interface ApiResponse {
   data: Thread[];
@@ -12,7 +13,8 @@ interface ApiResponse {
 }
 
 
-const _ThreadList = ({ slug }: { slug: string }) => {
+const _ThreadList = () => {
+  const { slug } = useParams<{ slug: string }>();
   const [threads, setThreads] = useState<Thread[]>([]);
   const [status, setStatus] = useState<'idle' | 'loading' | 'succeeded' | 'failed'>('idle');
   const [error, setError] = useState<string | null>(null);
@@ -51,16 +53,24 @@ const _ThreadList = ({ slug }: { slug: string }) => {
 
   if (status === "succeeded") {
     return (
+      <>
+        <Space />
+        <Center $width="100%">
+          <PageTitle>/{slug}/</PageTitle>
 
-      <FlexContainer $p="0" style={{ margin: "0" }} $direction="column" $justify="flex-start" $align="flex-start">
-        {threads.map((thread) => (<div key={thread.op.id} style={{width:"100%"}}>
-          <ThreadPreviewComponent thread={thread} />
-          <Divider />
-        </div>
-        ))}
-      </FlexContainer>
+        </Center>
+        <Space />
+        <Divider />
 
+        <FlexContainer $p="0" style={{ margin: "0" }} $direction="column" $justify="flex-start" $align="flex-start">
+          {threads.map((thread) => (<div key={thread.op.id} style={{ width: "100%" }}>
+            <ThreadPreviewComponent thread={thread} />
+            <Divider />
+          </div>
+          ))}
+        </FlexContainer>
 
+      </>
     );
   }
 

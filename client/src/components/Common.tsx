@@ -58,7 +58,7 @@ export const Divider = styled.hr<DividerProps>`
 `;
 
 
-export const Anchor = styled(Link) <{ $s?: FontSizeKey | CSSProperties["fontSize"] }>`
+export const Anchor = styled(Link) <{ $s?: FontSizeKey | CSSProperties["fontSize"], $td?: CSSProperties["textDecoration"] }>`
   color: ${({ theme }) => theme.colors.link};
   text-decoration: none;
   font-size: ${({ $s: fs, theme }) => {
@@ -72,16 +72,19 @@ export const Anchor = styled(Link) <{ $s?: FontSizeKey | CSSProperties["fontSize
     }
     return "0";
   }};
-  transition: filter 0.4s cubic-bezier(.19,1,.22,1);
-  will-change: transform;
   
   backface-visibility: hidden;
   &:hover {
     filter: brightness(${({ theme }) => (
     theme.colors.anchorBrightness
   )});
-    transform: scale(1.06);
-    text-decoration: underline;
+    
+    text-decoration: ${({$td: td})=>{
+      if(td){
+        return (td);
+      }
+      return "underline";
+    }};
   }
 `;
 
@@ -146,4 +149,10 @@ export const Space = styled.div<{ $height?: SpacingKey | CSSProperties["height"]
     }
     return h;
   }};
+`;
+
+
+export const PageTitle = styled.h2`
+  color: ${({ theme }) => theme.colors.text};
+  margin: 0;
 `;

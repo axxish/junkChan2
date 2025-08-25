@@ -4,11 +4,14 @@
 import { Home } from './pages/Home';
 import { BrowserRouter, Routes, Route } from 'react-router';
 import { IconMoon } from "@tabler/icons-react";
-import { BoardPage } from './pages/BoardPage';
+import { Nexus } from './pages/Nexus';
 import { darkTheme, GlobalStyle, lightTheme } from './util/theme'; // Adjust path
 import styled, { ThemeProvider } from 'styled-components'; // <-- Import styled
 import { useAppDispatch, useAppSelector } from './store';
 import { selectColorScheme, toggleColorScheme } from './slices/themeSlice';
+import { ThreadList } from './pages/ThreadList';
+import { ThreadView } from './pages/ThreadView';
+import { LoginPage } from './pages/LoginPage';
 
 // --- Create the styled component here ---
 const ThemeToggleButton = styled.button`
@@ -59,7 +62,11 @@ function App() {
 
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/boards/:slug/*" element={<BoardPage />} />
+          <Route element={<Nexus/>}>
+            <Route path="/boards/:slug/*" element={<ThreadList />} />
+            <Route path="/threads/:id/*" element={<ThreadView/>}/>
+            <Route path="/login" element={<LoginPage/>}/>
+          </Route>
         </Routes>
         
         <ThemeToggleButton onClick={() => dispatch(toggleColorScheme())}>

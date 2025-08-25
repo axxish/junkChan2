@@ -4,16 +4,17 @@ import { Text, Image, Title, Anchor, StatusText, Paper } from "./Common";
 import { styled } from "styled-components";
 import type { JSX } from "react";
 
-const PostTitle = styled.h4`
+const PostTitle = styled.h3`
     margin: 0;
     color: ${({ theme }) => theme.colors.postTitle};
     display: inline-block;
     padding-right: ${({ theme }) => theme.spacing["3xs"]};
+    font-size: ${({theme})=> theme.fontSizes.lg};
   `;
 
 const PostData = styled.span`
   color: ${({ theme }) => theme.colors.greyText};
-  font-size: ${({ theme }) => theme.fontSizes.xs};
+  font-size: ${({ theme }) => theme.fontSizes.md};
 `;
 
 const PostPaper = styled(Paper)`
@@ -54,7 +55,11 @@ export function PostView({ p, u, isReply, action }: { p: Post, u?: UserProfile, 
     let actionBtn = (<></>);
     
     if(action?.type==="View"){
-        actionBtn = (<>[ <Anchor $s={"xs"} to={`threads/${action.post_id}`}>View thread</Anchor> ]</>);
+        actionBtn = (<>[ <Anchor $s={"md"} $td="underline" to={`/threads/${action.post_id}`}>View thread</Anchor> ]</>);
+    }
+
+    if(action?.type==="Reply"){
+        actionBtn = (<>[ <Anchor $s={"md"} $td="underline" to={``}>Reply</Anchor> ]</>);
     }
 
     const content = (<Stack $justify="flex-start" $align="flex-start" $p="sm">
@@ -64,7 +69,7 @@ export function PostView({ p, u, isReply, action }: { p: Post, u?: UserProfile, 
         </div>
         <Group $gap="sm" >
             {p.image_url && <Image src={p.image_url} style={{ maxWidth: "200px" }} alt="Thread image" />}
-            <Text $s={"md"}>{p.comment}</Text>
+            <Text $s={"lg"}>{p.comment}</Text>
         </Group>
     </Stack>);
 
